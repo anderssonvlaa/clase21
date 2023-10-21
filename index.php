@@ -132,7 +132,6 @@ $totales= isset($_POST['totales']) ? $_POST['totales']: "";
                             WHERE YEAR(dates) IN ($yearSelection_str)
                             GROUP BY YEAR(dates)";
                     } else {
-                        // Si no se han seleccionado años, query todos los años
                         $query = "SELECT SUM(sale) as sale, YEAR(dates) as year FROM bill_details
                             INNER JOIN bill_head ON bill_details.code = bill_head.code
                             GROUP BY YEAR(dates)";
@@ -155,7 +154,6 @@ $totales= isset($_POST['totales']) ? $_POST['totales']: "";
                             GROUP BY YEAR(dates)
                     HAVING sum(sale) >=$totales";
                     } else {
-                        // Si no se han seleccionado años, query todos los años
                         $query = "SELECT SUM(sale) as sale, YEAR(dates) as year FROM bill_details
                             INNER JOIN bill_head ON bill_details.code = bill_head.code
                             GROUP BY YEAR(dates) 
