@@ -22,9 +22,8 @@ $totales= isset($_POST['totales']) ? $_POST['totales']: "";
 <form action="index.php" method="post" style="text-align:center">
     <label for=""></label>
     <input type="text" name="totales" id="totales" value="<?php echo isset($_POST['totales']) ? $_POST['totales'] : ""; ?>">
-    <input type="submit" value="Graficar">
     
-    <div id="yearCheckboxes" style="float: center; margin-right: 20px;">
+    <!-- <div id="yearCheckboxes" style="float: center; margin-right: 20px;">
         <?php
         
         $yearsQuery = "SELECT DISTINCT YEAR(dates) as year FROM bill_details
@@ -37,7 +36,7 @@ $totales= isset($_POST['totales']) ? $_POST['totales']: "";
             echo '<label for="year_' . $year . '"><input type="checkbox" name="años[]" id="year_' . $year . '" value="' . $year . '" ' . $checked . '> ' . $year . '</label>';
         }
         ?>
-    </div>
+    </div> -->
 </form>
 
     
@@ -188,4 +187,24 @@ $totales= isset($_POST['totales']) ? $_POST['totales']: "";
         }
 
     });
+    $(document).ready(function () {
+    $("#totales").keyup(function () {
+
+        var totales = $(this).val();
+
+        
+        var totales = $("#totales").val();
+           
+        $.ajax({
+            type: "POST", 
+            url: "index.php", 
+            data: { totales: totales
+             }, 
+            success: function (response) {
+             console.log(response);
+                $("#container").html(response);
+            }
+        });
+    });
+});
 </script>
