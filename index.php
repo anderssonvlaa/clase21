@@ -1,178 +1,191 @@
 <?php
 include_once 'conexion.php';
-
-$years = isset($_POST['years']) ? $_POST['years'] : [];
-$stringY = '';
-if ($years != []) {
-    foreach($years as $index=>$y){
-        if($index == count($years) - 1){
-            $stringY .= "'%$y%'";
-            continue;
-        }
-        $stringY .= "'%$y%' OR dates LIKE ";
-    }
-}
-
+$totales= isset($_POST['totales']) ? $_POST['totales']: "";
 
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script src="https://code.highcharts.com/highcharts.js"></script>
-<script src="https://code.highcharts.com/modules/series-label.js"></script>
-<script src="https://code.highcharts.com/modules/exporting.js"></script>
-<script src="https://code.highcharts.com/modules/export-data.js"></script>
-<script src="https://code.highcharts.com/modules/accessibility.js"></script>
-<link rel="stylesheet" href="estilo.css">
-<title>Document</title>
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <script src="https://code.highcharts.com/modules/series-label.js"></script>
+    <script src="https://code.highcharts.com/modules/exporting.js"></script>
+    <script src="https://code.highcharts.com/modules/export-data.js"></script>
+    <script src="https://code.highcharts.com/modules/accessibility.js"></script>
+    <link rel="stylesheet" href="estilo.css">
+    <title>Document</title>
 </head>
 
 <body>
-    <form action="index.php" method="POST" style="text-align:center">
-        <label for="">Totales anuales mayores o iguales a </label>
-        <br>
-        <input type="text" name="totales" id="totales" value="<?php echo isset($_POST['totales']) ? $_POST['totales'] : "" ; ?>">
-        <br>
+<form action="index.php" method="post" style="text-align:center">
+    <label for=""></label>
+    <input type="text" name="totales" id="totales" value="<?php echo isset($_POST['totales']) ? $_POST['totales'] : ""; ?>">
+    <input type="submit" value="Graficar">
+    
+    <div id="yearCheckboxes" style="float: center; margin-right: 20px;">
         <?php
-        $year = "SELECT DISTINCT YEAR(dates) as año
-            FROM bill_head WHERE YEAR(dates) BETWEEN 2013 AND 2022 ORDER BY (dates) ASC;";
-        $exe= mysqli_query($conexion, $year);
-
-        while($yearSelection= mysqli_fetch_array($exe)){
-            $exists = '';
-            if (in_array($yearSelection[0], $years)) {
-                $exists = 'checked';
-            }
-            echo "<label>".$yearSelection[0]."</label>";
-            echo "<input name='years[]' $exists  value='$yearSelection[0]' type='checkbox' name='' id=''>";
-
+        
+        $yearsQuery = "SELECT DISTINCT YEAR(dates) as year FROM bill_details
+            INNER JOIN bill_head ON bill_details.code=bill_head.code
+            ORDER BY year ASC";
+        $yearsResult = mysqli_query($conexion, $yearsQuery);
+        while ($rowYear = mysqli_fetch_assoc($yearsResult)) {
+            $year = $rowYear['year'];
+            $checked = (isset($_POST['años']) && in_array($year, $_POST['años'])) ? 'checked' : '';
+            echo '<label for="year_' . $year . '"><input type="checkbox" name="años[]" id="year_' . $year . '" value="' . $year . '" ' . $checked . '> ' . $year . '</label>';
         }
-
         ?>
-        <br>
-        <input type="submit" value="Graficar">
-    </form>
-<figure class="highcharts-figure">
-    <div id="container"></div>
-</figure>
+    </div>
+</form>
 
+    
+
+    <figure class="highcharts-figure">
+        <div id="container"></div>
+    </figure>
 </body>
+
 </html>
-<script >
-    
-Highcharts.chart('container', {
-    
 
-    title: {
-        text: 'Empresa XYZ',
-        align: 'center'
-    },
+<script>
+    Highcharts.chart('container', {
 
-    subtitle: {
-        text: 'Total de ventas anuales de los ultimos 10 años',
-        align: 'center'
-    },
-
-    yAxis: {
         title: {
-            text: 'Ventas $'
-        }
-    },
+            text: 'Empresa XYZ',
+            align: 'center'
+        },
 
-    xAxis: {
-        accessibility: {
-            rangeDescription: 'Desde: 2013 to 2022'
-        }
-    },
+        subtitle: {
+            text: 'Total de ventas anuales de los ultimos 10 años',
+            align: 'center'
+        },
 
-    legend: {
-        layout: 'vertical',
-        align: 'right',
-        verticalAlign: 'middle'
-    },
+        yAxis: {
+            title: {
+                text: 'ventas en $'
+            }
+        },
 
-    plotOptions: {
-        series: {
-            label: {
-                connectorAllowed: false
-            },
-            pointStart: 2013
-        }
-    },
+        legend: {
+            layout: 'vertical',
+            align: 'right',
+            verticalAlign: 'middle'
+        },
 
-    series: [{
-        name: 'Ventas anuales',
-        data: [
-            
-           <?php
-            $totales = isset($_POST['totales'])? $_POST['totales']: "";
+        xAxis: {
+            categories: [
+                <?php
+                
 
-            
-            if($years !== [] && $totales !== ""){
-                $query = "SELECT sum(sale) as Venta, dates  from bill_details
-                inner join bill_head on bill_details.code=bill_head.code
-                WHERE dates LIKE $stringY
-                GROUP by YEAR(dates) 
-                HAVING sum(sale) >= $totales";
-                $execute = mysqli_query($conexion, $query);
-                while ($data = mysqli_fetch_array($execute)) {
-                    $d = number_format($data[0], 2, '.', '');
-                    echo $data[0] . ",";
+                if ($totales !== "") {
+                    
+                    $query = "SELECT DISTINCT YEAR(dates) as year FROM bill_details
+                        INNER JOIN bill_head ON bill_details.code=bill_head.code
+                        GROUP BY YEAR(dates)
+                        HAVING SUM(sale) >= $totales
+                        ORDER BY year ASC";
+                } else {
+                    
+                    $query = "SELECT DISTINCT YEAR(dates) as year FROM bill_details
+                        INNER JOIN bill_head ON bill_details.code=bill_head.code
+                        ORDER BY year ASC";
                 }
 
-            }else if ($totales !== "") {
-                    $query = "SELECT sum(sale) as Venta, dates from bill_details
-                    inner join bill_head on bill_details.code=bill_head.code
-                    GROUP by YEAR(datess)
-                    HAVING sum(sale) >= $totales";
-                    $execute = mysqli_query($conexion, $query);
-                    while ($data = mysqli_fetch_array($execute)) {
-                        $d = number_format($data[0], 2, '.', '');
-                        echo $data[0] . ",";
-                    }
+                $result = mysqli_query($conexion, $query);
 
-            } else if ($years !== []) {
-                    $query = "SELECT sum(sale) as Venta, dates from bill_details
-                    inner join bill_head on bill_details.code=bill_head.code
-                    WHERE dates LIKE $stringY
-                    GROUP by YEAR(dates)";
-                    $execute = mysqli_query($conexion, $query);
-                    while ($data = mysqli_fetch_array($execute)) {
-                        $d = number_format($data[0], 2, '.', '');
-                        echo $data[0] . ",";
-                    }
+                while ($row = mysqli_fetch_assoc($result)) {
 
-            } else if ($totales === "") {
-                    $query = "SELECT sum(sale) as Venta, dates  from bill_details
-                    inner join bill_head on bill_details.code=bill_head.code
-                    GROUP by YEAR(dates)";
-                    $execute = mysqli_query($conexion, $query);
-                    while ($data = mysqli_fetch_array($execute)) {
-                        $d = number_format($data[0], 2, '.', '');
-                        echo $data[0] . ",";
+                    if (isset($_POST['años']) && is_array($_POST['años'])) {
+
+                        $yearSelection = $_POST['años'];
+                        foreach ($yearSelection as $years) {
+                            if($years===$row['year']){
+                                echo "'" . $row['year'] . "',";
+                            }
+                           
+                        }
+                    } else {
+                        echo "'" . $row['year'] . "',";
                     }
-            }
-        ?>
+                    
+
+                }
+                ?>
             ]
-   
-    }],
+        },
 
-    responsive: {
-        rules: [{
-            condition: {
-                maxWidth: 500
-            },
-            chartOptions: {
-                legend: {
-                    layout: 'horizontal',
-                    align: 'center',
-                    verticalAlign: 'bottom'
+        series: [{
+            name: 'Ventas anuales',
+            data: [
+                <?php
+                  
+                
+                  $yearSelection = isset($_POST['años']) ? $_POST['años'] : array();
+                if($totales ===""){
+                    
+
+                    if (!empty($yearSelection)) {
+                        $yearSelection_str = implode(',', $yearSelection);
+                        $query = "SELECT SUM(sale) as sale, YEAR(dates) as year FROM bill_details
+                            INNER JOIN bill_head ON bill_details.code = bill_head.code
+                            WHERE YEAR(dates) IN ($yearSelection_str)
+                            GROUP BY YEAR(dates)";
+                    } else {
+                        // Si no se han seleccionado años, query todos los años
+                        $query = "SELECT SUM(sale) as sale, YEAR(dates) as year FROM bill_details
+                            INNER JOIN bill_head ON bill_details.code = bill_head.code
+                            GROUP BY YEAR(dates)";
+                    }
+                               $executar = mysqli_query($conexion, $query);
+                               while ($dato = mysqli_fetch_array($executar)) {
+                                   $d=number_format($dato[0],2,'.','');
+                                   echo $d.",";
+                 }
+ 
                 }
-            }
-        }]
-    }
+                else {
+                
 
-});
+                    if (!empty($yearSelection)) {
+                        $yearSelection_str = implode(',', $yearSelection);
+                        $query = "SELECT SUM(sale) as sale, YEAR(dates) as year FROM bill_details
+                            INNER JOIN bill_head ON bill_details.code = bill_head.code
+                            WHERE YEAR(dates) IN ($yearSelection_str)
+                            GROUP BY YEAR(dates)
+                    HAVING sum(sale) >=$totales";
+                    } else {
+                        // Si no se han seleccionado años, query todos los años
+                        $query = "SELECT SUM(sale) as sale, YEAR(dates) as year FROM bill_details
+                            INNER JOIN bill_head ON bill_details.code = bill_head.code
+                            GROUP BY YEAR(dates) 
+                    HAVING sum(sale) >=$totales";
+                    }
+                               $executar = mysqli_query($conexion, $query);
+                               while ($dato = mysqli_fetch_array($executar)) {
+                                   $d=number_format($dato[0],2,'.','');
+                                   echo $d.",";
+                 }
+                }
+                ?>
+            ]
+        }],
+
+        responsive: {
+            rules: [{
+                condition: {
+                    maxWidth: 500
+                },
+                chartOptions: {
+                    legend: {
+                        layout: 'horizontal',
+                        align: 'center',
+                        verticalAlign: 'bottom'
+                    }
+                }
+            }]
+        }
+
+    });
 </script>
